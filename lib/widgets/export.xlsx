@@ -1,0 +1,48 @@
+import 'package:excel/excel.dart';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
+
+Future<void> exportMonthlyReport(List<Expense> allExpenses, int month, int year) async {
+  // 1. Filter data for the specific month
+  final monthlyData = allExpenses.where((e) => 
+    e.date.month == month && e.date.year == year).toList();
+
+  // 2. Create Excel Object
+  var excel = Excel.createExcel();
+  Sheet sheet = excel['Monthly Report'];
+
+  // 3. Add Headers
+  sheet.appendRow([
+    TextCellValue('Date'),
+    TextCellValue('Category'),
+    TextCellValue('Merchant'),
+    TextCellValue('Amount'),
+    TextCellValue('Type'),
+    TextCellValue('Notes'),
+  ]);
+
+  // 4. Add Monthly Rows
+  for (var expense in monthlyData) {
+    sheet.appendRow([
+      TextCellValue(expense.date.toString().split(' ')),
+      TextCellValue(expense.category),
+      TextCellValue(expense.merchant ?? ''),
+      TextCellValue(expense.amount.toString()),
+      TextCellValue(expense.type),
+      TextCellValue(expense.notes ?? ''),
+    ]);
+  }
+
+  // 5. Save and Share
+  final directory = await getTemporaryDirectory();
+  final filePath = "${directory.path}/Report_${month}_$year.xlsx";
+  final fileBytes = excel.encode();
+  
+  File(filePath)
+    ..createSync(recursive: true)
+    ..writeAsBytesSync(fileBytes!);
+
+  // Share the file so the user can send it via WhatsApp/Email
+  await Share.shareXFiles([XFile(filePath)], text: 'My Expense Report for $month/$year');
+}
